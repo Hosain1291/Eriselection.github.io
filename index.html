@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>에리스 선거 의석수 변환기</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: '조선굵은고딕', Arial, sans-serif;
+            font-family: 'IBM Ples sans KR', sans-serif;
             margin: 0;
             padding: 20px;
             background-image: url('https://i.unu.edu/media/ourworld.unu.edu-en/article/20473/whatever-the-election-result-the-dutch-public-is-dangerously-polarised.jpg');
@@ -17,6 +21,7 @@
         h1 {
             text-align: center;
             color: #000;
+            font-weight: 700;
         }
         .container {
             max-width: 600px;
@@ -33,12 +38,14 @@
             display: block;
             margin-bottom: 5px;
             color: #333;
+            font-weight: 500;
         }
         input[type="text"], input[type="number"], input[type="color"] {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
+            font-family: 'IBM Ples sans KR', sans-serif;
         }
         button {
             background-color: #28a745;
@@ -48,6 +55,8 @@
             border-radius: 4px;
             cursor: pointer;
             width: 100%;
+            font-family: 'IBM Ples sans KR', sans-serif;
+            font-weight: 500;
         }
         button:hover {
             background-color: #218838;
@@ -67,9 +76,13 @@
             border-radius: 8px;
             text-align: center;
             color: white;
+            font-weight: 500;
         }
         #myChart {
             margin-top: 20px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 10px;
         }
         .candidates {
             margin-top: 20px;
@@ -80,6 +93,10 @@
         }
         .candidate-input {
             margin-bottom: 10px;
+        }
+        h2 {
+            font-weight: 700;
+            margin-top: 0;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -105,11 +122,12 @@
 
         <button onclick="calculateSeats()">의석수 계산</button>
         <div class="result" id="result"></div>
-        <canvas id="myChart" width="400" height="200"></canvas>
+        <canvas id="myChart"></canvas>
     </div>
 
     <script>
         let parties = [];
+        let myChart = null;
 
         function addParty() {
             const partyName = document.getElementById('party-name').value.trim();
@@ -130,7 +148,7 @@
                 parties.push({ name: partyName, votes: [], color: partyColor });
                 document.getElementById('parties').appendChild(partySection);
                 document.getElementById('party-name').value = '';
-                document.getElementById('party-color').value = '#007bff'; // 기본 색상으로 초기화
+                document.getElementById('party-color').value = '#007bff';
             } else {
                 alert('정당명을 입력해주세요.');
             }
@@ -146,7 +164,7 @@
                 const candidateItem = document.createElement('div');
                 candidateItem.innerHTML = `${candidateName}: <input type="number" value="${candidateVotes}" onchange="updateVotes(this)" />`;
                 candidateList.appendChild(candidateItem);
-                parties[parties.length - 1].votes.push(candidateVotes); // 마지막 추가된 정당에 투표수 추가
+                parties[parties.length - 1].votes.push(candidateVotes);
                 candidateInput.querySelector('input[type="text"]').value = '';
                 candidateInput.querySelector('input[type="number"]').value = '';
             } else {
@@ -157,8 +175,8 @@
         function updateVotes(input) {
             const votes = parseInt(input.value) || 0;
             const candidateIndex = Array.from(input.parentElement.parentElement.children).indexOf(input.parentElement);
-            const partyIndex = parties.length - 1; // 마지막 정당에 해당
-            parties[partyIndex].votes[candidateIndex] = votes; // 해당 후보의 투표수를 업데이트
+            const partyIndex = parties.length - 1;
+            parties[partyIndex].votes[candidateIndex] = votes;
         }
 
         function calculateSeats() {
@@ -168,7 +186,6 @@
                 return;
             }
 
-            // 투표수 계산
             const allVotes = parties.reduce((acc, party) => {
                 return acc + party.votes.reduce((a, b) => a + b, 0);
             }, 0);
@@ -192,10 +209,11 @@
             const results = parties.map(party => ({
                 name: party.name,
                 seats: seatDistribution.filter(c => c.party === party.name).length,
-                color: party.color // 각 정당의 색상 추가
+                color: party.color
             }));
 
             displayResults(results);
+            updateChart(results);
         }
 
         function displayResults(results) {
@@ -205,6 +223,63 @@
                     ${res.name} 의석: ${res.seats}
                 </div>
             `).join('');
+        }
+
+        function updateChart(results) {
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: results.map(r => r.name),
+                    datasets: [{
+                        label: '의석수',
+                        data: results.map(r => r.seats),
+                        backgroundColor: results.map(r => r.color),
+                        borderColor: results.map(r => r.color),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '정당별 의석수 분포',
+                            font: {
+                                family: 'IBM Ples sans KR',
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                font: {
+                                    family: 'IBM Ples sans KR'
+                                }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    family: 'IBM Ples sans KR'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
     </script>
 </body>
