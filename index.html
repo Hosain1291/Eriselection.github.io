@@ -7,10 +7,10 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'IBM Ples sans KR', sans-serif;
+            font-family: 'Noto Sans KR', sans-serif;
             margin: 0;
             padding: 20px;
             background-image: url('https://i.unu.edu/media/ourworld.unu.edu-en/article/20473/whatever-the-election-result-the-dutch-public-is-dangerously-polarised.jpg');
@@ -40,12 +40,22 @@
             color: #333;
             font-weight: 500;
         }
-        input[type="text"], input[type="number"], input[type="color"] {
+        input[type="text"], input[type="number"] {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-family: 'IBM Ples sans KR', sans-serif;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        input[type="color"] {
+            width: 100%;
+            height: 40px; /* 높이를 늘려서 더 크게 보이도록 설정 */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0; /* 패딩 제거 */
+            outline: none; /* 포커스 시 외곽선 제거 */
+            margin-bottom: 5px; /* 하단 여백 추가 */
         }
         button {
             background-color: #28a745;
@@ -55,7 +65,7 @@
             border-radius: 4px;
             cursor: pointer;
             width: 100%;
-            font-family: 'IBM Ples sans KR', sans-serif;
+            font-family: 'Noto Sans KR', sans-serif;
             font-weight: 500;
         }
         button:hover {
@@ -98,6 +108,13 @@
             font-weight: 700;
             margin-top: 0;
         }
+        .winners {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -107,14 +124,14 @@
         
         <div class="input-group">
             <label for="total-seats">총 의석수:</label>
-            <input type="number" id="total-seats" placeholder="예: 10" />
+            <input type="number" id="total-seats" value="5" readonly />
         </div>
 
         <div class="input-group">
             <label for="party-name">정당명:</label>
             <input type="text" id="party-name" placeholder="정당명을 입력하세요" />
             <label for="party-color">정당 색상:</label>
-            <input type="color" id="party-color" value="#007bff" />
+            <input type="color" id="party-color" value="#007bff" style="height: 40px;" />
             <button onclick="addParty()">정당 추가</button>
         </div>
 
@@ -123,6 +140,8 @@
         <button onclick="calculateSeats()">의석수 계산</button>
         <div class="result" id="result"></div>
         <canvas id="myChart"></canvas>
+        
+        <div class="winners" id="winners"></div> <!-- 당선된 후보 명단을 위한 추가 div -->
     </div>
 
     <script>
@@ -145,7 +164,7 @@
                     </div>
                     <div class="candidate-list"></div>
                 `;
-                parties.push({ name: partyName, votes: [], color: partyColor });
+                parties.push({ name: partyName, votes: [], color: partyColor, candidates: [] });
                 document.getElementById('parties').appendChild(partySection);
                 document.getElementById('party-name').value = '';
                 document.getElementById('party-color').value = '#007bff';
@@ -164,6 +183,8 @@
                 const candidateItem = document.createElement('div');
                 candidateItem.innerHTML = `${candidateName}: <input type="number" value="${candidateVotes}" onchange="updateVotes(this)" />`;
                 candidateList.appendChild(candidateItem);
+                // 마지막 정당의 후보 목록에 추가
+                parties[parties.length - 1].candidates.push(candidateName);
                 parties[parties.length - 1].votes.push(candidateVotes);
                 candidateInput.querySelector('input[type="text"]').value = '';
                 candidateInput.querySelector('input[type="number"]').value = '';
@@ -180,12 +201,7 @@
         }
 
         function calculateSeats() {
-            const totalSeats = parseInt(document.getElementById('total-seats').value);
-            if (!totalSeats || totalSeats <= 0) {
-                alert('올바른 총 의석수를 입력해주세요.');
-                return;
-            }
-
+            const totalSeats = 5; // 고정된 의석수 설정
             const allVotes = parties.reduce((acc, party) => {
                 return acc + party.votes.reduce((a, b) => a + b, 0);
             }, 0);
@@ -199,7 +215,8 @@
                 return party.votes.map((votes, index) => ({
                     party: party.name,
                     votes,
-                    index
+                    index,
+                    candidate: party.candidates[index] // 후보 이름 추가
                 }));
             });
 
@@ -209,11 +226,13 @@
             const results = parties.map(party => ({
                 name: party.name,
                 seats: seatDistribution.filter(c => c.party === party.name).length,
-                color: party.color
+                color: party.color,
+                winningCandidates: seatDistribution.filter(c => c.party === party.name).map(c => c.candidate) // 당선된 후보 목록
             }));
 
             displayResults(results);
             updateChart(results);
+            displayWinners(results);
         }
 
         function displayResults(results) {
@@ -254,7 +273,7 @@
                             display: true,
                             text: '정당별 의석수 분포',
                             font: {
-                                family: 'IBM Ples sans KR',
+                                family: 'Noto Sans KR',
                                 size: 14,
                                 weight: 'bold'
                             }
@@ -266,20 +285,32 @@
                             ticks: {
                                 stepSize: 1,
                                 font: {
-                                    family: 'IBM Ples sans KR'
+                                    family: 'Noto Sans KR'
                                 }
                             }
                         },
                         y: {
                             ticks: {
                                 font: {
-                                    family: 'IBM Ples sans KR'
+                                    family: 'Noto Sans KR'
                                 }
                             }
                         }
                     }
                 }
             });
+        }
+
+        function displayWinners(results) {
+            const winnersDiv = document.getElementById('winners');
+            winnersDiv.innerHTML = results.map(res => `
+                <div>
+                    <h3>${res.name} 당선 후보:</h3>
+                    <ul>
+                        ${res.winningCandidates.map(candidate => `<li>${candidate}</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('');
         }
     </script>
 </body>
