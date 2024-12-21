@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>에리스 선거 의석수 변환기</title>
+    <style>
+        body {
+            font-family: '조선굵은고딕', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-image: url('https://i.unu.edu/media/ourworld.unu.edu-en/article/20473/whatever-the-election-result-the-dutch-public-is-dangerously-polarised.jpg');
+            background-size: cover;
+            background-position: center;
+            color: black;
+        }
+        h1 {
+            text-align: center;
+            color: #000;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            display: flex;
+            justify-content: space-between;
+        }
+        .party-box {
+            width: 45%;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+        }
+        .progressive-box {
+            background-color: #ff4d4d; /* 진보당 색상 */
+        }
+        .conservative-box {
+            background-color: #007bff; /* 보수당 색상 */
+        }
+        #myChart {
+            margin-top: 20px;
+        }
+        .candidates {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .candidate-input {
+            margin-bottom: 10px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>에리스 선거 의석수 변환기</h1>
+        
+        <div class="input-group">
+            <label for="total-seats">총 의석수:</label>
+            <input type="number" id="total-seats" placeholder="예: 10" />
+        </div>
+
+        <div class="input-group">
+            <label for="party-name">정당명:</label>
+            <input type="text" id="party-name" placeholder="정당명을 입력하세요" />
+            <button onclick="addParty()">정당 추가</button>
+        </div>
+
+        <div id="parties"></div>
+
+        <button onclick="calculateSeats()">의석수 계산</button>
+        <div class="result" id="result"></div>
+        <canvas id="myChart" width="400" height="200"></canvas>
+    </div>
+
+    <script>
+        let parties = [];
+
+        function addParty() {
+            const partyName = document.getElementById('party-name').value.trim();
+            if (partyName) {
+                const partySection = document.createElement('div');
+                partySection.className = 'candidates';
+                partySection.innerHTML = `
+                    <h2>${partyName} 후보</h2>
+                    <div class="candidate-input">
+                        <input type="text" placeholder="후보명" />
+                        <input type="number" placeholder="투표수" />
+                        <button onclick="addCandidate(this)">후보 추가</button>
+                    </div>
+                    <div class="candidate-list"></div>
+                `;
+                parties.push({ name: partyName, votes: [] });
+                document.getElementById('parties').appendChild(partySection);
+                document.getElementById('party-name').value = '';
+            } else {
+                alert('정당명을 입력해주세요.');
+            }
+        }
+
+        function addCandidate(button) {
+            const candidateInput = button.parentElement;
+            const candidateName = candidateInput.querySelector('input[type="text"]').value.trim();
+            const candidateVotes = parseInt(candidateInput.querySelector('input[type="number"]').value) || 0;
+
+            if (candidateName) {
+                const candidateList = candidateInput.nextElementSibling;
+                const candidateItem = document.createElement('div');
+                candidateItem.innerHTML = `${candidateName}: <input type="number" value="${candidateVotes}" onchange="updateVotes(this)" />`;
+                candidateList.appendChild(candidateItem);
+                parties[parties.length - 1].votes.push(candidateVotes); // 마지막 추가된 정당에 투표수 추가
+                candidateInput.querySelector('input[type="text"]').value = '';
+                candidateInput.querySelector('input[type="number"]').value = '';
+            } else {
+                alert('후보명을 입력해주세요.');
+            }
+        }
+
+        function updateVotes(input) {
+            const votes = parseInt(input.value) || 0;
+            const candidateIndex = Array.from(input.parentElement.parentElement.children).indexOf(input.parentElement);
+            const partyIndex = parties.length - 1; // 마지막 정당에 해당
+            parties[partyIndex].votes[candidateIndex] = votes; // 해당 후보의 투표수를 업데이트
+        }
+
+        function calculateSeats() {
+            const totalSeats = parseInt(document.getElementById('total-seats').value);
+            if (!totalSeats || totalSeats <= 0) {
+                alert('올바른 총 의석수를 입력해주세요.');
+                return;
+            }
+
+            // 투표수 계산
+            const allVotes = parties.reduce((acc, party) => {
+                return acc + party.votes.reduce((a, b) => a + b, 0);
+            }, 0);
+
+            if (allVotes === 0) {
+                alert('후보의 투표수를 입력해주세요.');
+                return;
+            }
+
+            const allCandidates = parties.flatMap(party => {
+                return party.votes.map((votes, index) => ({
+                    party: party.name,
+                    votes,
+                    index
+                }));
+            });
+
+            allCandidates.sort((a, b) => b.votes - a.votes);
+
+            const seatDistribution = allCandidates.slice(0, totalSeats);
+            const results = parties.map(party => ({
+                name: party.name,
+                seats: seatDistribution.filter(c => c.party === party.name).length
+            }));
+
+            displayResults(results);
+        }
+
+        function displayResults(results) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = results.map(res => `
+                <div class="party-box ${res.name === '진보당' ? 'progressive-box' : 'conservative-box'}">
+                    ${res.name} 의석: ${res.seats}
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
