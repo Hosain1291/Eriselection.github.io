@@ -34,7 +34,7 @@
             margin-bottom: 5px;
             color: #333;
         }
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], input[type="color"] {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
@@ -68,12 +68,6 @@
             text-align: center;
             color: white;
         }
-        .progressive-box {
-            background-color: #ff4d4d; /* 진보당 색상 */
-        }
-        .conservative-box {
-            background-color: #007bff; /* 보수당 색상 */
-        }
         #myChart {
             margin-top: 20px;
         }
@@ -102,6 +96,8 @@
         <div class="input-group">
             <label for="party-name">정당명:</label>
             <input type="text" id="party-name" placeholder="정당명을 입력하세요" />
+            <label for="party-color">정당 색상:</label>
+            <input type="color" id="party-color" value="#007bff" />
             <button onclick="addParty()">정당 추가</button>
         </div>
 
@@ -117,6 +113,8 @@
 
         function addParty() {
             const partyName = document.getElementById('party-name').value.trim();
+            const partyColor = document.getElementById('party-color').value;
+
             if (partyName) {
                 const partySection = document.createElement('div');
                 partySection.className = 'candidates';
@@ -129,9 +127,10 @@
                     </div>
                     <div class="candidate-list"></div>
                 `;
-                parties.push({ name: partyName, votes: [] });
+                parties.push({ name: partyName, votes: [], color: partyColor });
                 document.getElementById('parties').appendChild(partySection);
                 document.getElementById('party-name').value = '';
+                document.getElementById('party-color').value = '#007bff'; // 기본 색상으로 초기화
             } else {
                 alert('정당명을 입력해주세요.');
             }
@@ -192,7 +191,8 @@
             const seatDistribution = allCandidates.slice(0, totalSeats);
             const results = parties.map(party => ({
                 name: party.name,
-                seats: seatDistribution.filter(c => c.party === party.name).length
+                seats: seatDistribution.filter(c => c.party === party.name).length,
+                color: party.color // 각 정당의 색상 추가
             }));
 
             displayResults(results);
@@ -201,7 +201,7 @@
         function displayResults(results) {
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = results.map(res => `
-                <div class="party-box ${res.name === '진보당' ? 'progressive-box' : 'conservative-box'}">
+                <div class="party-box" style="background-color: ${res.color};">
                     ${res.name} 의석: ${res.seats}
                 </div>
             `).join('');
